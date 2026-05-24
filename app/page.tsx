@@ -1,184 +1,265 @@
-export default function StudentToolsLanding() {
-  const tools = [
-    {
-      title: 'GPA Calculator',
-      description: 'Quickly calculate weighted and unweighted GPA with customizable class weights.',
-    },
-    {
-      title: 'Study Planner',
-      description: 'Organize assignments, exams, and study sessions in one clean dashboard.',
-    },
-    {
-      title: 'Budget Tracker',
-      description: 'Track spending, savings, and financial goals as a student.',
-    },
-    {
-      title: 'Resume Builder',
-      description: 'Create a clean student resume for internships, jobs, and scholarships.',
-    },
-  ];
+"use client";
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-700 via-stone-200 to-white text-black">
-      <nav className="flex items-center justify-between px-8 py-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            StudentFlow
-          </h1>
-          <p className="text-sm text-slate-700">
-            Free tools built for students.
-          </p>
+import { useState } from "react";
+
+export default function StudentToolsApp() {
+  const [page, setPage] = useState("home");
+
+  // ---------------- GPA ----------------
+  const [classes, setClasses] = useState([
+    { name: "", type: "Regular", grade: "A" },
+  ]);
+
+  const gradePoints: Record<string, number> = {
+    A: 4,
+    B: 3,
+    C: 2,
+    D: 1,
+    F: 0,
+  };
+
+  const typeBonus: Record<string, number> = {
+    Regular: 0,
+    Honors: 0.5,
+    AP: 1,
+    IB: 1,
+  };
+
+  const calculateGPA = () => {
+    if (!classes.length) return "0.00";
+    let total = 0;
+    classes.forEach((c) => {
+      total += (gradePoints[c.grade] ?? 0) + (typeBonus[c.type] ?? 0);
+    });
+    return (total / classes.length).toFixed(2);
+  };
+
+  // ---------------- STUDY PLANNER ----------------
+  const [events, setEvents] = useState([]);
+  const [eventText, setEventText] = useState("");
+  const [eventDay, setEventDay] = useState(1);
+  const [eventType, setEventType] = useState("test");
+
+  const addEvent = () => {
+    setEvents([
+      ...events,
+      { day: Number(eventDay), text: eventText, type: eventType },
+    ]);
+  };
+
+  const getColor = (type) => {
+    if (type === "test") return "bg-red-500";
+    if (type === "assignment") return "bg-green-500";
+    return "bg-yellow-400";
+  };
+
+  // ---------------- BUDGET ----------------
+  const categories = ["Clothes", "Entertainment", "Food", "Gifts", "Personal", "School"];
+  const [spent, setSpent] = useState({});
+  const [budget, setBudget] = useState({});
+
+  const updateSpent = (cat, value) => {
+    setSpent({ ...spent, [cat]: Number(value) });
+  };
+
+  const updateBudget = (cat, value) => {
+    setBudget({ ...budget, [cat]: Number(value) });
+  };
+
+  const totalSpent = Object.values(spent).reduce((a, b) => a + (b || 0), 0);
+  const totalBudget = Object.values(budget).reduce((a, b) => a + (b || 0), 0);
+
+  // ---------------- RESUME ----------------
+  const [resume, setResume] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    gpa: "",
+    act: "",
+    sat: "",
+    awards: "",
+    orgs: [{ org: "", role: "" }],
+  });
+
+  const addOrg = () => {
+    setResume({
+      ...resume,
+      orgs: [...resume.orgs, { org: "", role: "" }],
+    });
+  };
+
+  // ---------------- GPA PAGE ----------------
+  if (page === "gpa") {
+    return (
+      <div className="min-h-screen p-8 bg-stone-100">
+        <button onClick={() => setPage("home")}>← Back</button>
+        <h1 className="text-2xl font-bold">GPA Calculator</h1>
+
+        {classes.map((c, i) => (
+          <div key={i} className="grid grid-cols-3 gap-2 mt-2">
+            <input placeholder="Class" onChange={(e) => {
+              const copy = [...classes]; copy[i].name = e.target.value; setClasses(copy);
+            }} />
+
+            <select onChange={(e) => {
+              const copy = [...classes]; copy[i].type = e.target.value; setClasses(copy);
+            }}>
+              <option>Regular</option>
+              <option>Honors</option>
+              <option>AP</option>
+              <option>IB</option>
+            </select>
+
+            <select onChange={(e) => {
+              const copy = [...classes]; copy[i].grade = e.target.value; setClasses(copy);
+            }}>
+              <option>A</option><option>B</option><option>C</option><option>D</option><option>F</option>
+            </select>
+          </div>
+        ))}
+
+        <button onClick={() => setClasses([...classes, { name: "", type: "Regular", grade: "A" }])}>
+          Add Class
+        </button>
+
+        <h2>GPA: {calculateGPA()}</h2>
+      </div>
+    );
+  }
+
+  // ---------------- PLANNER PAGE ----------------
+  if (page === "planner") {
+    return (
+      <div className="min-h-screen p-8 bg-white">
+        <button onClick={() => setPage("home")}>← Back</button>
+        <h1 className="text-2xl font-bold">Study Planner</h1>
+
+        <div className="grid grid-cols-7 gap-2 mt-4">
+          {[...Array(30)].map((_, i) => (
+            <div key={i} className="border p-2 h-20">
+              <div className="text-xs">Day {i + 1}</div>
+              {events
+                .filter((e) => e.day === i + 1)
+                .map((e, idx) => (
+                  <div key={idx} className={`text-xs text-white p-1 mt-1 ${getColor(e.type)}`}> 
+                    {e.text}
+                  </div>
+                ))}
+            </div>
+          ))}
         </div>
 
-        <div className="hidden gap-6 md:flex text-sm font-medium text-slate-800">
-          <a href="#tools" className="hover:text-slate-950 transition">
-            Tools
-          </a>
-          <a href="#about" className="hover:text-slate-950 transition">
-            About
-          </a>
-          <a href="#future" className="hover:text-slate-950 transition">
-            Future Features
-          </a>
+        <div className="mt-4">
+          <input placeholder="Task" onChange={(e) => setEventText(e.target.value)} />
+          <input type="number" min="1" max="30" onChange={(e) => setEventDay(e.target.value)} />
+          <select onChange={(e) => setEventType(e.target.value)}>
+            <option value="test">Test</option>
+            <option value="assignment">Assignment</option>
+            <option value="study">Study</option>
+          </select>
+          <button onClick={addEvent}>Add</button>
         </div>
-      </nav>
 
-      <main className="px-8 pb-20 pt-10">
-        <section className="mx-auto max-w-6xl rounded-3xl border border-white/40 bg-white/40 p-10 shadow-2xl backdrop-blur-md">
-          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
-            <div>
-              <div className="mb-4 inline-flex rounded-full border border-slate-300 bg-white/60 px-4 py-2 text-sm font-medium text-slate-800">
-                100% Free Student Tools
-              </div>
+        <div className="fixed bottom-2 left-2 text-xs">
+          <div className="bg-red-500 text-white p-1">Test</div>
+          <div className="bg-green-500 text-white p-1">Assignment</div>
+          <div className="bg-yellow-400 text-black p-1">Study</div>
+        </div>
+      </div>
+    );
+  }
 
-              <h2 className="max-w-xl text-5xl font-black leading-tight text-slate-950">
-                Tools that actually help students stay ahead.
-              </h2>
+  // ---------------- BUDGET PAGE ----------------
+  if (page === "budget") {
+    return (
+      <div className="min-h-screen p-8">
+        <button onClick={() => setPage("home")}>← Back</button>
+        <h1 className="text-2xl font-bold">Budget Tracker</h1>
 
-              <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-700">
-                A modern collection of free tools designed for ambitious students.
-                From GPA tracking to budgeting and productivity, StudentFlow helps
-                students work smarter without paying for overpriced apps.
-              </p>
-
-              <div className="mt-8 flex flex-wrap gap-4">
-                <button className="rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-slate-800">
-                  Explore Tools
-                </button>
-
-                <button className="rounded-2xl border border-slate-700 bg-white/70 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-white">
-                  Learn More
-                </button>
-              </div>
-            </div>
-
-            <div className="grid gap-5">
-              <div className="rounded-3xl border border-slate-300 bg-white/70 p-6 shadow-lg backdrop-blur-md">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-slate-900">
-                    Weekly Productivity
-                  </h3>
-                  <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
-                    Live
-                  </span>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <div className="mb-2 flex justify-between text-sm font-medium text-slate-700">
-                      <span>Assignments Completed</span>
-                      <span>78%</span>
-                    </div>
-                    <div className="h-3 rounded-full bg-slate-200">
-                      <div className="h-3 w-[78%] rounded-full bg-slate-900"></div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="mb-2 flex justify-between text-sm font-medium text-slate-700">
-                      <span>Study Goals</span>
-                      <span>64%</span>
-                    </div>
-                    <div className="h-3 rounded-full bg-slate-200">
-                      <div className="h-3 w-[64%] rounded-full bg-blue-900"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-slate-300 bg-slate-950 p-6 text-white shadow-lg">
-                <p className="text-sm uppercase tracking-[0.2em] text-slate-300">
-                  Mission
-                </p>
-
-                <h3 className="mt-3 text-2xl font-bold">
-                  Give students tools that should already exist for free.
-                </h3>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="tools" className="mx-auto mt-20 max-w-6xl">
-          <div className="mb-10">
-            <h2 className="text-4xl font-black text-slate-950">
-              Featured Tools
-            </h2>
-            <p className="mt-3 text-lg text-slate-700">
-              Clean, simple, and actually useful.
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {tools.map((tool) => (
-              <div
-                key={tool.title}
-                className="group rounded-3xl border border-white/40 bg-white/50 p-6 shadow-xl backdrop-blur-md transition hover:-translate-y-1 hover:bg-white/70"
-              >
-                <div className="mb-5 h-12 w-12 rounded-2xl bg-gradient-to-br from-slate-900 to-blue-900"></div>
-
-                <h3 className="text-xl font-bold text-slate-950">
-                  {tool.title}
-                </h3>
-
-                <p className="mt-3 leading-relaxed text-slate-700">
-                  {tool.description}
-                </p>
-
-                <button className="mt-6 text-sm font-semibold text-blue-950 transition group-hover:translate-x-1">
-                  Open Tool →
-                </button>
-              </div>
+        <table className="mt-4 w-full border">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Spent</th>
+              <th>Budget</th>
+              <th>Difference</th>
+            </tr>
+          </thead>
+          <tbody>
+            {categories.map((cat) => (
+              <tr key={cat}>
+                <td>{cat}</td>
+                <td>
+                  <input type="number" onChange={(e) => updateSpent(cat, e.target.value)} />
+                </td>
+                <td>
+                  <input type="number" onChange={(e) => updateBudget(cat, e.target.value)} />
+                </td>
+                <td>{(budget[cat] || 0) - (spent[cat] || 0)}</td>
+              </tr>
             ))}
+          </tbody>
+        </table>
+
+        <h3>Total Spent: {totalSpent}</h3>
+        <h3>Total Budget: {totalBudget}</h3>
+        <h3>Difference: {totalBudget - totalSpent}</h3>
+      </div>
+    );
+  }
+
+  // ---------------- RESUME PAGE ----------------
+  if (page === "resume") {
+    return (
+      <div className="min-h-screen p-8">
+        <button onClick={() => setPage("home")}>← Back</button>
+        <h1 className="text-2xl font-bold">Resume Builder</h1>
+
+        <input placeholder="Name" onChange={(e) => setResume({ ...resume, name: e.target.value })} />
+        <input placeholder="Email" onChange={(e) => setResume({ ...resume, email: e.target.value })} />
+        <input placeholder="Phone" onChange={(e) => setResume({ ...resume, phone: e.target.value })} />
+        <input placeholder="GPA" onChange={(e) => setResume({ ...resume, gpa: e.target.value })} />
+        <input placeholder="ACT" onChange={(e) => setResume({ ...resume, act: e.target.value })} />
+        <input placeholder="SAT" onChange={(e) => setResume({ ...resume, sat: e.target.value })} />
+        <input placeholder="Awards" onChange={(e) => setResume({ ...resume, awards: e.target.value })} />
+
+        {resume.orgs.map((o, i) => (
+          <div key={i}>
+            <input placeholder="Organization" onChange={(e) => {
+              const copy = [...resume.orgs]; copy[i].org = e.target.value; setResume({ ...resume, orgs: copy });
+            }} />
+            <input placeholder="Role" onChange={(e) => {
+              const copy = [...resume.orgs]; copy[i].role = e.target.value; setResume({ ...resume, orgs: copy });
+            }} />
           </div>
-        </section>
+        ))}
 
-        <section
-          id="about"
-          className="mx-auto mt-24 max-w-6xl rounded-3xl bg-slate-950 p-10 text-white shadow-2xl"
-        >
-          <div className="grid gap-10 lg:grid-cols-2">
-            <div>
-              <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
-                About The Project
-              </p>
+        <button onClick={addOrg}>Add Organization</button>
 
-              <h2 className="mt-4 text-4xl font-black leading-tight">
-                Built by a student who understands student problems.
-              </h2>
-            </div>
+        <h3 className="mt-4">Copy and paste onto your resume document.</h3>
+      </div>
+    );
+  }
 
-            <div>
-              <p className="text-lg leading-relaxed text-slate-300">
-                StudentFlow is designed to provide free, modern tools for students
-                navigating academics, productivity, and financial planning. The
-                goal is simple: make high-quality student resources accessible to
-                everyone.
-              </p>
-            </div>
-          </div>
-        </section>
-      </main>
+  // ---------------- HOME PAGE ----------------
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-stone-700 via-stone-200 to-white p-8">
+      <h1 className="text-4xl font-black">Student Tools</h1>
+
+      <div className="grid grid-cols-2 gap-6 mt-8">
+        <button onClick={() => setPage("gpa")} className="p-6 bg-white shadow">
+          GPA Calculator
+        </button>
+        <button onClick={() => setPage("planner")} className="p-6 bg-white shadow">
+          Study Planner
+        </button>
+        <button onClick={() => setPage("budget")} className="p-6 bg-white shadow">
+          Budget Tracker
+        </button>
+        <button onClick={() => setPage("resume")} className="p-6 bg-white shadow">
+          Resume Builder
+        </button>
+      </div>
     </div>
   );
 }
