@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type Event = {
@@ -13,7 +13,14 @@ type Event = {
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function Planner() {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<Event[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("planner");
+      if (saved) return JSON.parse(saved);
+    }
+    return [];
+  });
+
   const [selectedDay, setSelectedDay] = useState(0);
   const [text, setText] = useState("");
   const [type, setType] = useState<Event["type"]>("study");
@@ -47,6 +54,11 @@ export default function Planner() {
     }
   };
 
+  // AUTO SAVE
+  useEffect(() => {
+    localStorage.setItem("planner", JSON.stringify(events));
+  }, [events]);
+
   return (
     <div className="min-h-screen p-10 bg-stone-100 text-blue-950">
       <div className="max-w-6xl mx-auto">
@@ -60,7 +72,7 @@ export default function Planner() {
         </h1>
 
         <p className="text-blue-900 mt-1">
-          Organize your week with color-coded tasks and a clean schedule view.
+          Organize your week with color-coded tasks and auto-saving storage.
         </p>
 
         {/* INPUT BAR */}
