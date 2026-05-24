@@ -54,34 +54,54 @@ export default function GPA() {
     setClasses(classes.filter((_, i) => i !== index));
   };
 
-  const gpa =
+  // Weighted GPA
+  const weightedGPA =
     classes.reduce((sum, c) => {
       return sum + gradePoints[c.grade] + bonusPoints[c.type];
     }, 0) / classes.length;
 
+  // Unweighted GPA (no bonus)
+  const unweightedGPA =
+    classes.reduce((sum, c) => {
+      return sum + gradePoints[c.grade];
+    }, 0) / classes.length;
+
   return (
-    <div className="min-h-screen p-10 bg-stone-100">
+    <div className="min-h-screen p-10 bg-stone-100 text-blue-950">
       <div className="max-w-4xl mx-auto">
 
-        <Link href="/" className="text-sm underline">
+        <Link href="/" className="text-sm underline text-blue-900">
           ← Back to dashboard
         </Link>
 
-        <h1 className="text-3xl font-black mt-4">GPA Calculator</h1>
+        <h1 className="text-3xl font-black mt-4 text-blue-950">
+          GPA Calculator
+        </h1>
 
-        <p className="text-slate-600 mt-1">
-          Add your classes and track weighted GPA in real time.
+        <p className="text-blue-900 mt-1">
+          Track both weighted and unweighted GPA in real time.
         </p>
 
-        {/* GPA Display */}
-        <div className="mt-6 p-5 bg-white rounded-xl shadow">
-          <p className="text-sm text-slate-500">Current GPA</p>
-          <p className="text-4xl font-bold">
-            {isNaN(gpa) ? "0.00" : gpa.toFixed(2)}
-          </p>
+        {/* GPA DISPLAY */}
+        <div className="mt-6 grid md:grid-cols-2 gap-4">
+
+          <div className="p-5 bg-white rounded-xl shadow">
+            <p className="text-sm text-blue-900">Weighted GPA</p>
+            <p className="text-4xl font-bold">
+              {isNaN(weightedGPA) ? "0.00" : weightedGPA.toFixed(2)}
+            </p>
+          </div>
+
+          <div className="p-5 bg-white rounded-xl shadow">
+            <p className="text-sm text-blue-900">Unweighted GPA</p>
+            <p className="text-4xl font-bold">
+              {isNaN(unweightedGPA) ? "0.00" : unweightedGPA.toFixed(2)}
+            </p>
+          </div>
+
         </div>
 
-        {/* Class list */}
+        {/* CLASS INPUTS */}
         <div className="mt-6 space-y-4">
           {classes.map((c, i) => (
             <div
@@ -89,7 +109,7 @@ export default function GPA() {
               className="p-4 bg-white rounded-xl shadow grid md:grid-cols-4 gap-3 items-center"
             >
               <input
-                className="border p-2 rounded"
+                className="border p-2 rounded text-blue-950"
                 value={c.name}
                 onChange={(e) =>
                   updateClass(i, "name", e.target.value)
@@ -98,7 +118,7 @@ export default function GPA() {
               />
 
               <select
-                className="border p-2 rounded"
+                className="border p-2 rounded text-blue-950"
                 value={c.type}
                 onChange={(e) =>
                   updateClass(i, "type", e.target.value)
@@ -111,7 +131,7 @@ export default function GPA() {
               </select>
 
               <select
-                className="border p-2 rounded"
+                className="border p-2 rounded text-blue-950"
                 value={c.grade}
                 onChange={(e) =>
                   updateClass(i, "grade", e.target.value)
@@ -134,15 +154,23 @@ export default function GPA() {
           ))}
         </div>
 
-        {/* Actions */}
-        <div className="mt-6 flex gap-3">
-          <button
-            onClick={addClass}
-            className="px-4 py-2 bg-black text-white rounded"
-          >
-            Add Class
-          </button>
+        <button
+          onClick={addClass}
+          className="mt-6 px-4 py-2 bg-black text-white rounded"
+        >
+          Add Class
+        </button>
+
+        {/* QUOTE */}
+        <div className="mt-10 p-6 bg-white rounded-xl shadow text-center">
+          <p className="italic text-blue-900">
+            "your gpa doesn't define you as a person!"
+          </p>
+          <p className="text-sm text-blue-900 mt-2">
+            - former student
+          </p>
         </div>
+
       </div>
     </div>
   );
