@@ -1,279 +1,421 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import {
   PieChart,
   Pie,
   Cell,
+  Tooltip,
+  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
+  Legend,
 } from "recharts";
 
-type Category =
-  | "clothes"
-  | "entertainment"
-  | "food"
-  | "gifts"
-  | "personal"
-  | "school";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
-const categories: Category[] = [
-  "clothes",
-  "entertainment",
-  "food",
-  "gifts",
-  "personal",
-  "school",
+type Category = {
+  name: string;
+  budget: number;
+  spent: number;
+};
+
+type AidItem = {
+  cost: number;
+  paid: number;
+};
+
+const COLORS = [
+  "#1d4ed8",
+  "#2563eb",
+  "#3b82f6",
+  "#60a5fa",
+  "#93c5fd",
 ];
 
-type BudgetState = Record<Category, number>;
+export default function BudgetTracker() {
+  const [categories, setCategories] = useState<Category[]>([
+    {
+      name: "Food",
+      budget: 200,
+      spent: 50,
+    },
+  ]);
 
-export default function Budget() {
-  const [spent, setSpent] = useState<BudgetState>({
-    clothes: 0,
-    entertainment: 0,
-    food: 0,
-    gifts: 0,
-    personal: 0,
-    school: 0,
+  const [aidCosts, setAidCosts] = useState<Record<string, AidItem>>({
+    Tuition: { cost: 0, paid: 0 },
+    "Mandatory fees": { cost: 0, paid: 0 },
+    "On-campus dorm housing": { cost: 0, paid: 0 },
+    "On-campus meal plans": { cost: 0, paid: 0 },
+    Textbooks: { cost: 0, paid: 0 },
+    "Lab supplies": { cost: 0, paid: 0 },
+    "Computer hardware": { cost: 0, paid: 0 },
+    "Software subscriptions": { cost: 0, paid: 0 },
+    "Gas and fuel": { cost: 0, paid: 0 },
+    "Public transit passes": { cost: 0, paid: 0 },
+    "Parking permits": { cost: 0, paid: 0 },
+    "Flights home for breaks": { cost: 0, paid: 0 },
+    "Off-campus apartment rent": { cost: 0, paid: 0 },
+    "Off-campus groceries": { cost: 0, paid: 0 },
+    Utilities: { cost: 0, paid: 0 },
+    "Cell phone plans": { cost: 0, paid: 0 },
+    "Health insurance": { cost: 0, paid: 0 },
+    "Medical co-pays": { cost: 0, paid: 0 },
+    Toiletries: { cost: 0, paid: 0 },
+    "Laundry supplies": { cost: 0, paid: 0 },
+    Clothing: { cost: 0, paid: 0 },
+    Entertainment: { cost: 0, paid: 0 },
   });
 
-  const [budget, setBudget] = useState<BudgetState>({
-    clothes: 0,
-    entertainment: 0,
-    food: 0,
-    gifts: 0,
-    personal: 0,
-    school: 0,
-  });
+  const reportRef = useRef<HTMLDivElement>(null);
+  const aidRef = useRef<HTMLDivElement>(null);
 
-  // ----------------------------
-  // LOAD SAVED DATA
-  // ----------------------------
+  /* ---------------- LOAD ---------------- */
   useEffect(() => {
-    const saved = localStorage.getItem("budget");
+    const savedBudget = localStorage.getItem("budget_tracker");
+    const savedAid = localStorage.getItem("financial_aid");
 
-    if (!saved) return;
-
-    try {
-      const parsed = JSON.parse(saved);
-
-      if (parsed?.spent) setSpent(parsed.spent);
-      if (parsed?.budget) setBudget(parsed.budget);
-    } catch {
-      // fail silently but safely
-    }
+    if (savedBudget) setCategories(JSON.parse(savedBudget));
+    if (savedAid) setAidCosts(JSON.parse(savedAid));
   }, []);
 
-  // ----------------------------
-  // AUTO SAVE (SAFE GUARANTEE)
-  // ----------------------------
+  /* ---------------- SAVE ---------------- */
   useEffect(() => {
-    try {
-      localStorage.setItem(
-        "budget",
-        JSON.stringify({ spent, budget })
-      );
-    } catch {
-      // avoid breaking UI if storage fails
-    }
-  }, [spent, budget]);
+    localStorage.setItem("budget_tracker", JSON.stringify(categories));
+  }, [categories]);
 
-  // ----------------------------
-  // UPDATE HELPERS
-  // ----------------------------
-  const updateSpent = (cat: Category, value: number) => {
-    setSpent((prev) => ({ ...prev, [cat]: value }));
+  useEffect(() => {
+    localStorage.setItem("financial_aid", JSON.stringify(aidCosts));
+  }, [aidCosts]);
+
+  /* ---------------- BUDGET ---------------- */
+  const updateCategory = (i: number, field: keyof Category, value: string) => {
+    const copy = [...categories];
+    if (field === "name") copy[i][field] = value as never;
+    else copy[i][field] = Number(value) as never;
+    setCategories(copy);
   };
 
-  const updateBudget = (cat: Category, value: number) => {
-    setBudget((prev) => ({ ...prev, [cat]: value }));
-  };
+  const addCategory = () =>
+    setCategories([
+      ...categories,
+      { name: `Category ${categories.length + 1}`, budget: 0, spent: 0 },
+    ]);
 
-  // ----------------------------
-  // TOTALS
-  // ----------------------------
-  const totalSpent = Object.values(spent).reduce(
-    (a, b) => a + b,
-    0
-  );
+  const removeCategory = (i: number) =>
+    setCategories(categories.filter((_, idx) => idx !== i));
 
-  const totalBudget = Object.values(budget).reduce(
-    (a, b) => a + b,
-    0
-  );
+  const totalBudget = categories.reduce((s, c) => s + c.budget, 0);
+  const totalSpent = categories.reduce((s, c) => s + c.spent, 0);
 
-  // ----------------------------
-  // CHART DATA
-  // ----------------------------
   const pieData = categories.map((c) => ({
-    name: c,
-    value: spent[c],
+    name: c.name,
+    value: c.spent,
   }));
 
-  const COLORS = [
-    "#1e3a8a",
-    "#2563eb",
-    "#3b82f6",
-    "#60a5fa",
-    "#93c5fd",
-    "#1d4ed8",
+  const barData = [
+    {
+      name: "Overview",
+      Budget: totalBudget,
+      Spent: totalSpent,
+    },
   ];
 
-  const comparisonData = [
-    { name: "Budget", amount: totalBudget },
-    { name: "Spent", amount: totalSpent },
-  ];
+  /* ---------------- FINANCIAL AID ---------------- */
+  const updateAid = (key: string, field: "cost" | "paid", value: string) => {
+    setAidCosts((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], [field]: Number(value) },
+    }));
+  };
+
+  const totalAidCost = Object.values(aidCosts).reduce((s, v) => s + v.cost, 0);
+  const totalPaid = Object.values(aidCosts).reduce((s, v) => s + v.paid, 0);
+
+  const aidPieData = Object.entries(aidCosts).map(([key, val]) => ({
+    name: key,
+    value: val.cost,
+  }));
+
+  const aidBarData = Object.entries(aidCosts).map(([key, val]) => ({
+    name: key,
+    Cost: val.cost,
+    Paid: val.paid,
+  }));
+
+  /* ---------------- EXPORTS ---------------- */
+  const exportPDF = async () => {
+    if (!reportRef.current) return;
+
+    const canvas = await html2canvas(reportRef.current, {
+      backgroundColor: "#fff",
+      scale: 2,
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+
+    pdf.save("budget-report.pdf");
+  };
+
+  const exportAidPDF = async () => {
+    if (!aidRef.current) return;
+
+    const canvas = await html2canvas(aidRef.current, {
+      backgroundColor: "#fff",
+      scale: 2,
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+
+    pdf.save("financial-aid-report.pdf");
+  };
 
   return (
-    <div className="min-h-screen p-10 bg-stone-100 text-blue-950">
+    <div className="min-h-screen bg-gray-100 p-10 text-blue-950">
+
       <div className="max-w-6xl mx-auto">
 
-        {/* BACK BUTTON (FIXED) */}
-        <Link
-          href="/"
-          className="text-sm underline text-blue-900"
-        >
-          ← Back to dashboard
+        <Link href="/" className="text-sm underline">
+          ← Back
         </Link>
 
         <h1 className="text-3xl font-black mt-4">
           Budget Tracker
         </h1>
 
-        <p className="text-blue-900 mt-1">
-          Track spending, budgets, and financial balance visually.
-        </p>
-
         {/* SUMMARY */}
-        <div className="mt-6 grid md:grid-cols-3 gap-4">
-
-          <div className="p-4 bg-white rounded-xl shadow">
-            <p className="text-sm text-blue-900">Total Spent</p>
-            <p className="text-2xl font-bold">
-              ${totalSpent.toFixed(2)}
-            </p>
-          </div>
-
-          <div className="p-4 bg-white rounded-xl shadow">
-            <p className="text-sm text-blue-900">Total Budget</p>
-            <p className="text-2xl font-bold">
+        <div className="grid md:grid-cols-2 gap-4 mt-8">
+          <div className="bg-white p-6 rounded-2xl shadow">
+            <p>Total Budget</p>
+            <h2 className="text-4xl font-bold mt-2">
               ${totalBudget.toFixed(2)}
-            </p>
+            </h2>
           </div>
 
-          <div className="p-4 bg-white rounded-xl shadow">
-            <p className="text-sm text-blue-900">Remaining</p>
-            <p className="text-2xl font-bold">
-              ${(totalBudget - totalSpent).toFixed(2)}
-            </p>
+          <div className="bg-white p-6 rounded-2xl shadow">
+            <p>Total Spent</p>
+            <h2 className="text-4xl font-bold mt-2">
+              ${totalSpent.toFixed(2)}
+            </h2>
           </div>
-
         </div>
 
-        {/* INPUT TABLE */}
-        <div className="mt-8 bg-white p-6 rounded-xl shadow">
-          <h2 className="font-bold mb-4">
-            Categories
+        {/* CATEGORY INPUTS */}
+        <div className="space-y-4 mt-8">
+          {categories.map((c, i) => (
+            <div
+              key={i}
+              className="bg-white p-5 rounded-2xl shadow grid md:grid-cols-4 gap-4"
+            >
+              <input
+                className="border p-2 rounded"
+                value={c.name}
+                onChange={(e) =>
+                  updateCategory(i, "name", e.target.value)
+                }
+              />
+
+              <input
+                type="number"
+                className="border p-2 rounded"
+                value={c.budget}
+                onChange={(e) =>
+                  updateCategory(i, "budget", e.target.value)
+                }
+              />
+
+              <input
+                type="number"
+                className="border p-2 rounded"
+                value={c.spent}
+                onChange={(e) =>
+                  updateCategory(i, "spent", e.target.value)
+                }
+              />
+
+              <button
+                onClick={() => removeCategory(i)}
+                className="text-red-500 text-sm"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={addCategory}
+          className="mt-6 px-4 py-2 bg-black text-white rounded-xl"
+        >
+          Add Category
+        </button>
+
+        {/* REPORT */}
+        <div ref={reportRef} className="mt-12 bg-white p-8 rounded-2xl shadow">
+          <h2 className="text-2xl font-bold mb-6">Budget Report</h2>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" outerRadius={100}>
+                    {pieData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barData}>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="Budget" fill="#1d4ed8" />
+                  <Bar dataKey="Spent" fill="#60a5fa" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={exportPDF}
+          className="mt-8 px-5 py-3 bg-blue-950 text-white rounded-2xl"
+        >
+          Export Report
+        </button>
+
+        {/* FINANCIAL AID */}
+        <div ref={aidRef} className="mt-16 bg-white p-6 rounded-2xl shadow">
+
+          <h2 className="text-2xl font-bold mb-6">
+            Financial Aid
           </h2>
 
-          <div className="space-y-4">
-            {categories.map((cat) => (
+          <div className="grid grid-cols-3 gap-4 border-b pb-3 mb-4 font-semibold text-blue-900">
+            <div>Category</div>
+            <div className="text-center">Cost</div>
+            <div className="text-center">Paid</div>
+          </div>
+
+          <div className="space-y-3">
+            {Object.keys(aidCosts).map((key) => (
               <div
-                key={cat}
-                className="grid md:grid-cols-3 gap-3 items-center border p-3 rounded"
+                key={key}
+                className="grid grid-cols-3 gap-4 items-center"
               >
-                <div className="font-semibold capitalize">
-                  {cat}
+                <div className="text-sm font-medium">
+                  {key}
                 </div>
 
                 <input
                   type="number"
-                  className="border p-2 rounded"
-                  placeholder="Spent"
-                  value={spent[cat]}
+                  className="border p-2 rounded text-right"
+                  value={aidCosts[key].cost}
                   onChange={(e) =>
-                    updateSpent(cat, Number(e.target.value))
+                    updateAid(key, "cost", e.target.value)
                   }
                 />
 
                 <input
                   type="number"
-                  className="border p-2 rounded"
-                  placeholder="Budget"
-                  value={budget[cat]}
+                  className="border p-2 rounded text-right"
+                  value={aidCosts[key].paid}
                   onChange={(e) =>
-                    updateBudget(cat, Number(e.target.value))
+                    updateAid(key, "paid", e.target.value)
                   }
                 />
               </div>
             ))}
           </div>
-        </div>
 
-        {/* VISUAL DASHBOARD */}
-        <div className="mt-10 grid md:grid-cols-2 gap-6">
+          {/* TOTALS */}
+          <div className="mt-8 border-t pt-4 space-y-2">
+            <div className="flex justify-between font-bold">
+              <span>Total Cost</span>
+              <span>${totalAidCost.toFixed(2)}</span>
+            </div>
 
-          {/* PIE CHART */}
-          <div className="bg-white p-6 rounded-xl shadow">
-            <h2 className="text-lg font-bold mb-4">
-              Spending Breakdown
-            </h2>
+            <div className="flex justify-between font-bold text-blue-800">
+              <span>Total Paid</span>
+              <span>${totalPaid.toFixed(2)}</span>
+            </div>
+          </div>
 
-            <div className="w-full h-80">
+          {/* EXPORT BUTTON */}
+          <button
+            onClick={exportAidPDF}
+            className="mt-6 px-5 py-3 bg-blue-900 text-white rounded-2xl"
+          >
+            Export Financial Aid
+          </button>
+
+          {/* CHARTS */}
+          <div className="mt-10 grid md:grid-cols-2 gap-8">
+
+            <div className="h-72">
+              <h3 className="text-sm font-semibold text-blue-900 mb-2">
+                Cost Distribution
+              </h3>
+
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={pieData}
+                    data={aidPieData}
                     dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={110}
-                    label
+                    outerRadius={100}
                   >
-                    {pieData.map((_, index) => (
-                      <Cell
-                        key={index}
-                        fill={COLORS[index % COLORS.length]}
-                      />
+                    {aidPieData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
-
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          </div>
 
-          {/* BAR CHART */}
-          <div className="bg-white p-6 rounded-xl shadow">
-            <h2 className="text-lg font-bold mb-4">
-              Budget vs Spending
-            </h2>
+            <div className="h-72">
+              <h3 className="text-sm font-semibold text-blue-900 mb-2">
+                Cost vs Paid Gap
+              </h3>
 
-            <div className="w-full h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={comparisonData}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                <BarChart data={aidBarData}>
                   <XAxis dataKey="name" />
                   <YAxis />
                   <Tooltip />
-                  <Bar
-                    dataKey="amount"
-                    fill="#1e3a8a"
-                    radius={[6, 6, 0, 0]}
-                  />
+                  <Legend />
+                  <Bar dataKey="Cost" fill="#1d4ed8" />
+                  <Bar dataKey="Paid" fill="#60a5fa" />
                 </BarChart>
               </ResponsiveContainer>
+
             </div>
+
           </div>
 
         </div>
